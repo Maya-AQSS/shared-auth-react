@@ -32,7 +32,8 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Maya-AQSS/shared-auth-react.git"
+    "url": "git+https://github.com/Maya-AQSS/maya_platform.git",
+    "directory": "packages/js/shared-auth-react"
   },
   "publishConfig": {
     "access": "public"
