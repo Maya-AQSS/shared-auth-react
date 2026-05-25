@@ -7,7 +7,7 @@
  *
  * @example
  * // src/api/http.ts
- * import { createApiClient } from '@maya/shared-auth-react'
+ * import { createApiClient } from '@ceedcv-maya/shared-auth-react'
  * import { oidcAuthService } from '../auth/oidcAdapter'
  *
  * export const { apiFetchJson, apiGetJson, buildApiUrl, getBearerToken, ApiHttpError } =

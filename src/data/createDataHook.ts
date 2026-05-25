@@ -34,7 +34,7 @@ export interface CreateDataHookConfig<TArgs, TData> {
  *   export const fetchLog = (id: string) => apiGetJson<Log>(`logs/${id}`)
  *
  *   // hooks/useLog.ts
- *   import { createDataHook } from '@maya/shared-auth-react'
+ *   import { createDataHook } from '@ceedcv-maya/shared-auth-react'
  *   import { fetchLog } from '../api/logs'
  *
  *   export const useLog = createDataHook({
