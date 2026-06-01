@@ -161,17 +161,31 @@ export function AuthProvider({ children, keycloak, onLoad = 'login-required', en
   // Limitación: las pestañas en background NO se enteran hasta que el
   // usuario las visita (no hay broadcast en tiempo real sin HTTPS+iframe).
   const lastSeenLogoutRef = useRef<number>(0)
+  const logoutListenerMountedAtRef = useRef<number>(0)
   useEffect(() => {
     if (typeof window === 'undefined') return undefined
     // Al montar, registramos el último loggedOut visible como «ya
     // procesado» para evitar disparar logout en frío si la cookie
     // tenía un timestamp viejo (p. ej. logout del usuario anterior).
     lastSeenLogoutRef.current = readLogoutSignal()
+    // Mount time as reference for the grace period below.
+    logoutListenerMountedAtRef.current = Date.now()
 
     const onMaybeLogout = (): void => {
       const signal = readLogoutSignal()
       if (signal > lastSeenLogoutRef.current) {
         lastSeenLogoutRef.current = signal
+        // Grace period: ignore cross-app logout dispatches within the
+        // first 5s after mount. During React StrictMode double-mount or
+        // when the cookie is being rehydrated by another component
+        // mid-init, the listener can fire before the auth state has
+        // stabilized — without this guard, a transient signal triggers
+        // an unwanted logout immediately after a successful login.
+        const elapsedSinceMount = Date.now() - logoutListenerMountedAtRef.current
+        if (elapsedSinceMount < 5000) {
+          if (enableLogging) console.log(`👋 Logout cross-app señal recibida (${elapsedSinceMount}ms tras mount) — en periodo de gracia, ignorando`)
+          return
+        }
         // Solo cierra sesión si esta app aún cree estar autenticada.
         // Si ya no hay token, ignora — el flujo de KC se encargará.
         if (keycloak.authenticated) {
