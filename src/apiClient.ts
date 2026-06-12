@@ -115,7 +115,9 @@ export function createApiClient(keycloak: Keycloak, baseUrl: string): ApiClient 
    *   - {"errors": {"field": ["..."]}} (validation)
    * Si no encuentra nada legible, retorna null.
    */
-  function extractErrorString(body: unknown): string | null {
+  function extractErrorString(body: unknown, depth = 0): string | null {
+    // Límite de profundidad: un body anidado maliciosamente no debe agotar la pila.
+    if (depth > 5) return null
     if (body === null || body === undefined) return null
     if (typeof body === 'string') return body
     if (typeof body !== 'object') return String(body)
@@ -124,13 +126,13 @@ export function createApiClient(keycloak: Keycloak, baseUrl: string): ApiClient 
     if (typeof obj.message === 'string' && obj.message !== '') return obj.message
     if (typeof obj.error === 'string' && obj.error !== '') return obj.error
     if (obj.error && typeof obj.error === 'object') {
-      const nested = extractErrorString(obj.error)
+      const nested = extractErrorString(obj.error, depth + 1)
       if (nested !== null) return nested
     }
     if (obj.errors && typeof obj.errors === 'object') {
       const first = Object.values(obj.errors as Record<string, unknown>)[0]
       if (Array.isArray(first) && typeof first[0] === 'string') return first[0]
-      const nested = extractErrorString(obj.errors)
+      const nested = extractErrorString(obj.errors, depth + 1)
       if (nested !== null) return nested
     }
     return null
