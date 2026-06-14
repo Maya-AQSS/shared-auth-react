@@ -25,6 +25,25 @@ export class ApiHttpError extends Error {
   }
 }
 
+/**
+ * Builds an {@link ApiHttpError} from a raw `Response` for code paths that
+ * bypass `apiFetchJson` — multipart uploads and blob downloads. Extracts
+ * `message` from the JSON body, falling back to `response.statusText` when
+ * the body is absent or not JSON.
+ */
+export async function apiErrorFromResponse(response: Response): Promise<ApiHttpError> {
+  let message = response.statusText
+  try {
+    const body = (await response.json()) as { message?: string }
+    if (body?.message) {
+      message = body.message
+    }
+  } catch {
+    /* keep statusText */
+  }
+  return new ApiHttpError(message, response.status)
+}
+
 export type ApiFetchOptions = {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
   body?: unknown
