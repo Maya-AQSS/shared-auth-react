@@ -22,7 +22,7 @@
  * implementado; este módulo desaparecerá cuando exista un canal backend
  * compartido (Redis con TTL, BroadcastChannel sobre dominio común, …).
  */
-import { getDomain, getPublicSuffix } from 'tldts'
+import { getDomain } from 'tldts'
 import { readCachedUserProfile, USER_PROFILE_STORAGE_KEY, writeCachedUserProfile } from './userProfileCache'
 
 const COOKIE_NAME = 'maya_session_overrides'
@@ -120,12 +120,19 @@ function getCookieDomain(): string {
   if (fromEnv) return fromEnv
 
   const registrable = getDomain(host, { allowPrivateDomains: false })
-  const suffix = getPublicSuffix(host, { allowPrivateDomains: false })
 
-  if (registrable && suffix && IP_BASED_PSL_SUFFIXES.includes(suffix as (typeof IP_BASED_PSL_SUFFIXES)[number])) {
-    const beforeSuffix = host.slice(0, host.length - suffix.length - 1) // sin el '.suffix'
+  // Refinado IP-PSL: con `allowPrivateDomains: false`, tldts colapsa hosts bajo
+  // wildcards DNS basados en IP (nip.io/sslip.io/xip.io) a ese sufijo como
+  // dominio REGISTRABLE (p.ej. `nip.io`), no como `suffix` (que es `io`). Ese
+  // registrable es a su vez un public suffix: usarlo como `Domain` haría que el
+  // navegador RECHAZARA la cookie → no se compartiría entre subdominios. Por eso
+  // comparamos contra `registrable` (no contra el public suffix) y reconstruimos
+  // `<ip>.<registrable>` para scopear la cookie al IP compartido por las apps del
+  // slot sin filtrarla a otros IPs (`192.168.2.1.nip.io` ≠ `10.0.0.1.nip.io`).
+  if (registrable && IP_BASED_PSL_SUFFIXES.includes(registrable as (typeof IP_BASED_PSL_SUFFIXES)[number])) {
+    const beforeSuffix = host.slice(0, host.length - registrable.length - 1) // sin el '.<registrable>'
     const ip = extractIPv4DottedQuad(beforeSuffix.split('.'))
-    if (ip) return `${ip}.${suffix}`
+    if (ip) return `${ip}.${registrable}`
     return host
   }
 
